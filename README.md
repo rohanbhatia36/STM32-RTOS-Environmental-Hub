@@ -26,6 +26,25 @@ This project is a multi-threaded environmental monitoring system built on an STM
 
 ---
 
+## Pinout
+
+The following table details the pin connections from the STM32F446RE microcontroller to the various peripherals.
+
+| Pin | Peripheral / Function |
+| :--- | :--- |
+| **PA0** | ADC1_IN0 (Light Sensor) |
+| **PA1** | TIM2_CH2 (PWM for LED) |
+| **PA9** | OLED_RES (Reset) |
+| **PB6** | OLED_CS (Chip Select) |
+| **PB10**| SPI2_SCK (Clock) |
+| **PC1** | SPI2_MOSI (Data In) |
+| **PC7** | OLED_DC (Data/Command) |
+| **PB9** | I2C1_SDA (BMP280 Data) |
+| **PB8** | I2C1_SCL (BMP280 Clock) |
+| **PC13**| B1 (User Blue Push-Button) |
+
+---
+
 ## Software and Technologies
 
 - **Primary Language:** C
