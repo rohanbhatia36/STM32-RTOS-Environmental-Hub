@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "bmp280.h"
 #include <stdio.h>
+#include "sh1106.h"
+#include "fonts.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +47,8 @@
 ADC_HandleTypeDef hadc1;
 
 I2C_HandleTypeDef hi2c1;
+
+SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim2;
 
@@ -88,6 +92,11 @@ osMessageQueueId_t lightLevelQueueHandle;
 const osMessageQueueAttr_t lightLevelQueue_attributes = {
   .name = "lightLevelQueue"
 };
+/* Definitions for pwmQueue */
+osMessageQueueId_t pwmQueueHandle;
+const osMessageQueueAttr_t pwmQueue_attributes = {
+  .name = "pwmQueue"
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -99,6 +108,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_SPI2_Init(void);
 void StartDefaultTask(void *argument);
 void StartReadSensorTask(void *argument);
 void StartReadADCTask(void *argument);
@@ -145,6 +155,7 @@ int main(void)
   MX_I2C1_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 	if (BMP280_Check() == BMP280_SUCCESS) {
 		BMP280_Read_Calibration();
@@ -156,6 +167,8 @@ int main(void)
 		BMP280_SetMode(BMP280_MODE_NORMAL);
 	}
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+
+	sh1106_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -179,6 +192,9 @@ int main(void)
 
   /* creation of lightLevelQueue */
   lightLevelQueueHandle = osMessageQueueNew (1, sizeof(uint32_t), &lightLevelQueue_attributes);
+
+  /* creation of pwmQueue */
+  pwmQueueHandle = osMessageQueueNew (1, sizeof(uint32_t), &pwmQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
@@ -356,6 +372,44 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief SPI2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI2_Init(void)
+{
+
+  /* USER CODE BEGIN SPI2_Init 0 */
+
+  /* USER CODE END SPI2_Init 0 */
+
+  /* USER CODE BEGIN SPI2_Init 1 */
+
+  /* USER CODE END SPI2_Init 1 */
+  /* SPI2 parameter configuration*/
+  hspi2.Instance = SPI2;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi2.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI2_Init 2 */
+
+  /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
@@ -466,7 +520,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|OLED_RES_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(OLED_DC_GPIO_Port, OLED_DC_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(OLED_CS_GPIO_Port, OLED_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -474,12 +534,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
+  /*Configure GPIO pins : LD2_Pin OLED_RES_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin|OLED_RES_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OLED_DC_Pin */
+  GPIO_InitStruct.Pin = OLED_DC_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OLED_DC_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : OLED_CS_Pin */
+  GPIO_InitStruct.Pin = OLED_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OLED_CS_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
@@ -507,27 +581,66 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	//float temp;
-	uint32_t light_level;
-	char uart_buf[50];
-	int uart_buf_len;
+  static float temperatureF = 0.0f;
+  static uint32_t lightLevel = 0;
+  uint32_t scaledLightLevel = 0;
 
-	/* Infinite loop */
-	for(;;)
-	{
-		//osMessageQueueGet(temperatureQueueHandle, &temp, NULL, osWaitForever);
-		osMessageQueueGet(lightLevelQueueHandle, &light_level, NULL, osWaitForever);
+  static uint8_t hasReceivedTemp = 0;
+  static uint8_t hasReceivedLight = 0;
 
-		// Format the temperature into a string
-		//uart_buf_len = sprintf(uart_buf, "Temperature: %.2f F\r\n", temp);
-		uart_buf_len = sprintf(uart_buf, "Light level: %lu\r\n", light_level);
+  char tempStr[20];
+  char lightStr[20];
 
-		// Transmit the string over UART
-		HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-	}
+  /* Infinite loop */
+  for(;;)
+  {
+    //check for a new temperature reading and update the variable if found
+    if (osMessageQueueGet(temperatureQueueHandle, &temperatureF, NULL, 10) == osOK)
+    {
+        hasReceivedTemp = 1;
+    }
+
+    //check for a new light level reading and update the variable if found
+    if (osMessageQueueGet(lightLevelQueueHandle, &lightLevel, NULL, 10) == osOK)
+    {
+        hasReceivedLight = 1;
+    }
+
+    //display content
+    //clear the entire screen buffer before drawing new content
+    sh1106_Fill(Black);
+
+    //always use the last known value.
+    if (hasReceivedTemp) {
+        sprintf(tempStr, "Temp: %.1f F", temperatureF);
+    } else {
+        sprintf(tempStr, "Reading Temp...");
+    }
+
+    //always use the last known value.
+    if (hasReceivedLight) {
+        //scale the raw ADC value (0-4095) to a percentage (0-100)
+        scaledLightLevel = (lightLevel * 100) / 4095;
+        sprintf(lightStr, "Light: %lu%%", scaledLightLevel);
+    } else {
+        sprintf(lightStr, "Reading Light...");
+    }
+
+    //draw content to the buffer
+    //set cursor for the first line (Y=5)
+    sh1106_SetCursor(2, 5);
+    sh1106_WriteString(tempStr, Font_7x10, White);
+
+    //set cursor for the second line (Y=25)
+    sh1106_SetCursor(2, 25);
+    sh1106_WriteString(lightStr, Font_7x10, White);
+
+    sh1106_UpdateScreen();
+
+    osDelay(250);
+  }
   /* USER CODE END 5 */
 }
-
 /* USER CODE BEGIN Header_StartReadSensorTask */
 /**
  * @brief Function implementing the readSensorTask thread.
@@ -551,11 +664,9 @@ void StartReadSensorTask(void *argument)
 		temp = (float)BMP280_CalcT(raw_temp) / 100.0f * (float)9/5 + 32;
 
 		//put the temperature value into the queue
-		//the last parameter is a timeout, 0 means don't wait if the queue is full
 		osMessageQueuePut(temperatureQueueHandle, &temp, 0, 0);
 
-		// Wait for 2 seconds before reading again
-		osDelay(2000);
+		osDelay(500);
 	}
   /* USER CODE END StartReadSensorTask */
 }
@@ -575,14 +686,17 @@ void StartReadADCTask(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
-		HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1,100);
-		adc_value = HAL_ADC_GetValue(&hadc1);
-		HAL_ADC_Stop(&hadc1);
-		osMessageQueuePut(lightLevelQueueHandle, &adc_value, 0 ,0);
+	    HAL_ADC_Start(&hadc1);
+	    HAL_ADC_PollForConversion(&hadc1,100);
+	    adc_value = HAL_ADC_GetValue(&hadc1);
+	    HAL_ADC_Stop(&hadc1);
 
-		osDelay(500);
+	    osMessageQueuePut(lightLevelQueueHandle, &adc_value, 0 ,0);
+	    osMessageQueuePut(pwmQueueHandle, &adc_value, 0, 0);
+
+	    osDelay(500);
 	}
+
   /* USER CODE END StartReadADCTask */
 }
 
@@ -596,33 +710,26 @@ void StartReadADCTask(void *argument)
 void StartControlPWMTask(void *argument)
 {
   /* USER CODE BEGIN StartControlPWMTask */
-  uint32_t adc_value;
-  uint32_t pwm_value;
-  char uart_buf[50]; // Buffer for our debug message
-  int uart_buf_len;   // Length of the message
+	uint32_t adc_value;
+	uint32_t pwm_value;
+	char uart_buf[50];
+	int uart_buf_len;
 
-  /* Infinite loop */
-  for(;;)
-  {
-    // Wait for a light level value to arrive
-    osMessageQueueGet(lightLevelQueueHandle, &adc_value, NULL, osWaitForever);
+	/* Infinite loop */
+	for(;;)
+	{
+	    osMessageQueueGet(pwmQueueHandle, &adc_value, NULL, osWaitForever);
 
-    // --- ADD THIS FOR DEBUGGING ---
-    uart_buf_len = sprintf(uart_buf, "ADC in: %lu\r\n", adc_value);
-    HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-    // -----------------------------
+	    uart_buf_len = sprintf(uart_buf, "ADC in: %lu\r\n", adc_value);
+	    HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 
-    // Map the ADC value to the PWM range
-    pwm_value = 1000 - ((adc_value * 1000) / 4095);
+	    pwm_value = 1000 - ((adc_value * 1000) / 4095);
 
-    // --- ADD THIS FOR DEBUGGING ---
-    uart_buf_len = sprintf(uart_buf, "PWM out: %lu\r\n", pwm_value);
-    HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
-    // -----------------------------
+	    uart_buf_len = sprintf(uart_buf, "PWM out: %lu\r\n\n", pwm_value);
+	    HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 100);
 
-    // Set the LED's brightness
-    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwm_value);
-  }
+	    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwm_value);
+	}
   /* USER CODE END StartControlPWMTask */
 }
 

@@ -1,0 +1,9 @@
+../Core/Src/sh1106.c:16:6:sh1106_Init	1
+../Core/Src/sh1106.c:57:6:sh1106_Fill	2
+../Core/Src/sh1106.c:62:6:sh1106_UpdateScreen	2
+../Core/Src/sh1106.c:72:6:sh1106_DrawPixel	4
+../Core/Src/sh1106.c:84:6:sh1106_WriteString	2
+../Core/Src/sh1106.c:98:6:sh1106_SetCursor	1
+../Core/Src/sh1106.c:104:6:sh1106_WriteCommand	1
+../Core/Src/sh1106.c:111:6:sh1106_WriteData	1
+../Core/Src/sh1106.c:119:6:sh1106_WriteChar	6
